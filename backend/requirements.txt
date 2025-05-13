@@ -1,0 +1,15 @@
+recovery_app/
+│
+├── backend/
+│   ├── app.py                # основной сервер Flask
+│   ├── model.py              # функция распознавания речи
+│   ├── train.py              # скрипт обучения (заготовка)
+│   ├── requirements.txt      # зависимости
+│   └── data/                 
+│
+├── frontend/
+│   ├── index.html            # главная страница
+│   ├── style.css             # стили (можно встроить в html)
+│   └── script.js             # логика фронтэнда
+│
+└── README.md                 # этот файл

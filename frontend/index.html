@@ -1,0 +1,135 @@
+<!DOCTYPE html>  
+<html lang="ru">  
+<head>  
+<meta charset="UTF-8" />  
+<title>Восстановление речи</title>  
+<style>  
+body { font-family: Arial, sans-serif; padding: 20px; }  
+h1 { text-align: center; }  
+#exercise-container { max-width: 600px; margin: auto; text-align: center; }  
+button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }  
+#feedback { margin-top: 20px; font-size: 1.2em; }  
+</style>  
+</head>  
+<body>  
+<h1>Упражнения по восстановлению речи</h1>  
+
+<div id="exercise-container">  
+  <h2>Произнесите: <span id="phrase">привет как дела</span
+  </h2>
+  <!-- Видео подсказка -->
+  <video id="videoHint" width="320" height="240" controls>
+    <source src="example_exercise.mp4" type="video/mp4" />
+    Ваш браузер не поддерживает видео.
+  </video>
+  <br/>
+
+  <!-- Кнопки для записи -->
+  <button id="startBtn">Начать запись</button>
+  <button id="stopBtn" disabled>Остановить запись</button>
+  <div id="status"></div>
+
+  <!-- Следующее упражнение -->
+  <button id="nextBtn">Следующее упражнение</button>
+
+  <!-- Отзыв -->
+  <div id="feedback"></div>
+</div>
+
+<script>
+// Список упражнений
+const phrases = [
+  "привет как дела",
+  "сколько стоит это",
+  "где находится аптека",
+  "пожалуйста помогите",
+  "до свидания"
+];
+
+let currentIdx = 0;
+
+const phraseSpan = document.getElementById('phrase');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const nextBtn = document.getElementById('nextBtn');
+const statusDiv = document.getElementById('status');
+const feedbackDiv = document.getElementById('feedback');
+const video = document.getElementById('videoHint');
+
+let mediaRecorder;
+
+// Обновить упражнение
+function setExercise(idx) {
+  phraseSpan.innerText = phrases[idx];
+  // Можно менять видео для каждого упражнения
+  // например, видео.src = 'exercise_'+idx+'.mp4';
+  // здесь используем один пример
+  video.src = 'example_exercise.mp4'; // замените по необходимости
+  feedbackDiv.innerHTML = '';
+}
+
+window.onload = () => {
+  setExercise(currentIdx);
+};
+
+nextBtn.onclick = () => {
+  currentIdx = (currentIdx + 1) % phrases.length;
+  setExercise(currentIdx);
+};
+
+// Запуск записи
+startBtn.onclick = async () => {
+  statusDiv.innerText = "Запрос разрешения на микрофон...";
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    let chunks = [];
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      sendAudio(blob);
+    };
+    mediaRecorder.start();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    statusDiv.innerText = "Запись идет...";
+  } catch (err) {
+    alert("Ошибка доступа к микрофону");
+  }
+};
+
+// Остановка записи
+stopBtn.onclick = () => {
+  mediaRecorder.stop();
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusDiv.innerText = "Запись остановлена.";
+};
+
+// Отправка аудио на сервер
+async function sendAudio(blob) {
+  statusDiv.innerText = "Обработка...";
+  const formData = new FormData();
+  formData.append('audio', blob, 'record.webm');
+
+  try {
+    const response = await fetch('/api/recognize', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+    const transcribed = data.transcription.trim().toLowerCase();
+    const target = phrases[currentIdx];
+
+    if (transcribed === target) {
+      feedbackDiv.innerHTML = "Молодец! Вы правильно произнесли.";
+    } else {
+      feedbackDiv.innerHTML = `Вы сказали: "${transcribed}". Попробуйте еще раз.`;
+    }
+  } catch (err) {
+    feedbackDiv.innerHTML = "Ошибка при обработке.";
+  }
+}
+</script>
+</body>
+</html>
