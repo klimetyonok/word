@@ -1,1 +1,2 @@
-worker: python your_script.py
+worker: python app.py
+web: python manage.py runserver %PORT%
